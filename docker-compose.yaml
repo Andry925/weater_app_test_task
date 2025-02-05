@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./src
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src/:/app
+    env_file:
+      - ./src/.env
+    environment:
+     - REDIS_PORT=6379
+     - REDIS_HOST=${REDIS_HOST}
+     - BASE_URL=${BASE_URL}
+     - TIMEZONE=${TIMEZONE}
+    restart: always
+    depends_on:
+      - redis
+
+  redis:
+    container_name: redis
+    image: redis:7.2.4-alpine
+    restart: always
+
+  celery_worker:
+    build:
+      context: ./src
+    command: celery -A celery_worker.celery_app worker --loglevel=info
+    volumes:
+      - ./src/:/app
+    env_file:
+      - ./src/.env
+    links:
+      - redis
+    depends_on:
+      - redis
+    restart: always
+
+
+  flower:
+    container_name: flower
+    build:
+       context: ./src
+    command: celery -A celery_worker.celery_app flower --port=5555
+    ports:
+      - "5556:5555"
+    volumes:
+      - ./src/:/app
+    env_file:
+      - ./src/.env
+
+    depends_on:
+      - backend
+      - redis
+      - celery_worker
