@@ -1,13 +1,17 @@
 from celery import Celery
+from decouple import config
 
 from config import settings
 
-REDIS_URL = f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/0"
+OPENAI_API_KEY = config('OPENAI_API_KEY')
+
+REDIS_URL = f"redis://redis:6379/0"
 
 celery_app = Celery(
-    "celery_worker",
     broker=REDIS_URL,
-    backend=REDIS_URL
+    backend=REDIS_URL,
+    include=['tasks.process_input_task']
+
 )
 
 celery_app.conf.update(
@@ -19,3 +23,5 @@ celery_app.conf.update(
     task_acks_late=True,
     task_reject_on_worker_lost=True,
 )
+
+celery_app.autodiscover_tasks()
