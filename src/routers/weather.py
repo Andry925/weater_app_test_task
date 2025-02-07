@@ -1,9 +1,12 @@
+import json
+import os
+
+import aiofiles
 from celery import chain
 from celery.result import AsyncResult
 from decouple import config
-from fastapi import APIRouter, status
+from fastapi import APIRouter, status, HTTPException
 from fastapi.responses import JSONResponse
-
 from schemas import cities_request_schema
 from tasks.process_input_task import create_llm_prompt, process_input
 
@@ -50,6 +53,26 @@ async def get_task_status(task_id: str):
         "saved_files": saved_files
     }
 
-# @router.get("/tasks/results/{region}", status_code=status.HTTP_200_OK)
-# async def get_task_results(region: str):
-#
+
+@router.get("/tasks/results/{region}", status_code=status.HTTP_200_OK)
+async def get_task_results(region: str):
+    try:
+        json_response = []
+        region_folder = f"weather_data/{region}"
+        if not os.path.exists(region_folder):
+            raise HTTPException(
+                status_code=404,
+                detail=f"Such region does not exist")
+        all_files = os.listdir(region_folder)
+        for file in all_files:
+            file_path = os.path.join(region_folder, file)
+            async with aiofiles.open(file_path, 'r') as infile:
+                content = await infile.read()
+                json_response.append(json.loads(content))
+        return {"region": region, "tasks": json_response}
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error reading files: {
+                str(e)}")
