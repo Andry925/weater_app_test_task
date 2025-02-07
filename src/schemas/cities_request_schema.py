@@ -6,7 +6,7 @@ class CityRequestSchema(BaseModel):
 
     @field_validator('cities')
     @classmethod
-    def validate_cuty(cls, cities):
+    def validate_city(cls, cities):
         if any(len(city) < 3 for city in cities):
-            raise ValueError("Cities must contain at least 3 letters")
+            raise ValueError("Each city must be at least 3 characters long")
         return cities
