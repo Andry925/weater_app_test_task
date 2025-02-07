@@ -4,7 +4,7 @@ from decouple import config
 from fastapi import APIRouter, status
 from fastapi.responses import JSONResponse
 
-from schemas import cities_request_schema, task_response_schema
+from schemas import cities_request_schema
 from tasks.process_input_task import create_llm_prompt, process_input
 
 router = APIRouter(prefix="/api/v1", tags=["weather"])
