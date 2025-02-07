@@ -27,12 +27,13 @@ def process_input(self, city_lists):
 @celery_app.task(name='process_input_task')
 def create_llm_prompt(city_lists):
     chatgpt_template = f"""
+        You are a multilingual language model specializing in city name translation and normalization
         Given the list of cities:
         {city_lists}
-
-        1. Normalize city names (e.g., 'Киев' → 'Kyiv', 'Londn' → 'London').
-        2. Translate the city name in English if the city name is not in English
-        2. Return a JSON response with 'cities' as a key and the corrected list as values.
+        1. Translate all city names to English, regardless of their original language.
+        2. Normalize city names (e.g., 'Киев' → 'Kyiv', 'Londn' → 'London').
+        3. Translate the city name in English if the city name is not in English
+        4. Return a JSON response with 'cities' as a key and the corrected list as values.
     """
     prompt_template = PromptTemplate(
         input_variables=["city_lists"],
