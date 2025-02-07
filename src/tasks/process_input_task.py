@@ -7,6 +7,7 @@ from langchain_openai import ChatOpenAI
 
 from celery_worker import celery_app
 from utils.weather_api_util import get_weather
+from utils.weather_api_util import save_weather_data
 
 OPENAI_API_KEY = config('OPENAI_API_KEY')
 WEATHER_API_KEY = config("WEATHER_API_KEY")
@@ -16,9 +17,13 @@ WEATHER_API_KEY = config("WEATHER_API_KEY")
 def process_input(city_lists):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    process_request = loop.run_until_complete(
-        get_weather(city_lists, WEATHER_API_KEY))
-    return process_request
+    process_request = loop.run_until_complete(get_weather(city_lists, WEATHER_API_KEY))
+    saved_files = loop.run_until_complete(save_weather_data(process_request))
+
+    return {
+        "weather_data": process_request,
+        "saved_files": saved_files
+    }
 
 
 @celery_app.task(name='process_input_task')
