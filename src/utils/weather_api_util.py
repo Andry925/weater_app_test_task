@@ -1,13 +1,14 @@
 import asyncio
+import json
+import os
 
+import aiofiles
 import aiohttp
 
 
 async def fetch_weather(session, city, api_key):
-
     try:
-        api_url = f'http://api.weatherapi.com/v1/current.json?key={
-            api_key}&q={city}&alerts=yes'
+        api_url = f'http://api.weatherapi.com/v1/current.json?key={api_key}&q={city}&alerts=yes'
         async with session.get(api_url) as response:
             response.raise_for_status()
             return {city: await response.json()}
@@ -22,5 +23,39 @@ async def get_weather(cities, api_key):
     async with aiohttp.ClientSession() as session:
         tasks = [fetch_weather(session, city, api_key) for city in cities]
         results = await asyncio.gather(*tasks)
-        print(results)
         return results
+
+
+async def process_data_to_required_format(results):
+    processed_data = {"status": "completed", "results": {}}
+
+    for city_data in results:
+        city_name = list(city_data.keys())[0]
+        city_info = city_data[city_name]
+        temperature = city_info["current"]["temp_c"]
+        description = city_info["current"]["condition"]["text"].lower()
+        tz_id = city_info["location"]["tz_id"]
+        continent = tz_id.split("/")[0]
+
+        if continent not in processed_data["results"]:
+            processed_data["results"][continent] = []
+
+        processed_data["results"][continent].append({
+            "city": city_name,
+            "temperature": temperature,
+            "description": description
+        })
+
+    return processed_data
+
+
+async def save_weather_data(weather_results):
+    processed_data = await process_data_to_required_format(weather_results)
+    for region, cities_data in processed_data["results"].items():
+        region_folder = f"weather_data/{region}"
+        if not os.path.exists(region_folder):
+            os.makedirs(f"{region_folder}")
+
+        async with aiofiles.open(f"{region_folder}/weather_{region}.json", 'w') as outfile:
+            json_data = {"results": cities_data}
+            await outfile.write(json.dumps(json_data, indent=4))
