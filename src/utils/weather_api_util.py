@@ -49,13 +49,17 @@ async def process_data_to_required_format(results):
     return processed_data
 
 
-async def save_weather_data(weather_results):
+async def save_weather_data(weather_results, task_id):
     processed_data = await process_data_to_required_format(weather_results)
+    file_paths = {}
     for region, cities_data in processed_data["results"].items():
         region_folder = f"weather_data/{region}"
+        file_path = f"{region_folder}/task_{task_id}.json"
         if not os.path.exists(region_folder):
             os.makedirs(f"{region_folder}")
 
-        async with aiofiles.open(f"{region_folder}/weather_{region}.json", 'w') as outfile:
+        async with aiofiles.open(file_path, 'w') as outfile:
             json_data = {"results": cities_data}
             await outfile.write(json.dumps(json_data, indent=4))
+            file_paths[region] = file_path
+    return file_paths
