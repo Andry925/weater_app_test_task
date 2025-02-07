@@ -1,11 +1,10 @@
 import asyncio
 import json
 
+from celery_worker import celery_app
 from decouple import config
 from langchain.prompts.prompt import PromptTemplate
 from langchain_openai import ChatOpenAI
-
-from celery_worker import celery_app
 from utils.weather_api_util import get_weather
 from utils.weather_api_util import save_weather_data
 
@@ -16,10 +15,8 @@ WEATHER_API_KEY = config("WEATHER_API_KEY")
 @celery_app.task(name='process_weather_task', bind=True)
 def process_input(self, city_lists):
     current_task_id = self.request.id
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    process_request = loop.run_until_complete(get_weather(city_lists, WEATHER_API_KEY))
-    saved_files = loop.run_until_complete(save_weather_data(process_request, task_id=current_task_id))
+    process_request = asyncio.run(get_weather(city_lists, WEATHER_API_KEY))
+    saved_files = asyncio.run(save_weather_data(process_request, task_id=current_task_id))
 
     return {
         "weather_data": process_request,
@@ -34,9 +31,9 @@ def create_llm_prompt(city_lists):
         {city_lists}
 
         1. Normalize city names (e.g., 'Киев' → 'Kyiv', 'Londn' → 'London').
+        2. Translate the city name in English if the city name is not in English
         2. Return a JSON response with 'cities' as a key and the corrected list as values.
     """
-
     prompt_template = PromptTemplate(
         input_variables=["city_lists"],
         template=chatgpt_template
